@@ -949,10 +949,13 @@ class MarkdownParser(BaseParser):
             allowed root, otherwise None
         """
         try:
-            path = Path(self._unwrap_link_destination(path_str))
+            destination = self._unwrap_link_destination(path_str)
+            paths = [Path(destination)]
+            if destination != path_str:
+                paths.append(Path(path_str))
 
             # Reject absolute paths: they can point anywhere on the host
-            if path.is_absolute():
+            if paths[0].is_absolute():
                 logger.warning(f"[MarkdownParser] Rejected absolute image path: {path_str}")
                 return None
 
@@ -966,38 +969,39 @@ class MarkdownParser(BaseParser):
             if not allowed_roots:
                 return None
 
-            # Markdown semantics first: the reference is relative to the file's
-            # own directory. Accept it when the resolved target stays inside ANY
-            # allowed root (e.g. ../images/x.gif escaping base_dir but still
-            # inside the import root a DirectoryParser passed down).
-            if base_dir:
-                candidate = (base_dir / path).resolve()
-                if candidate.exists():
-                    for root in allowed_roots:
-                        try:
-                            candidate.relative_to(root.resolve())
-                            return candidate
-                        except ValueError:
-                            continue
+            for path in paths:
+                # Markdown semantics first: the reference is relative to the file's
+                # own directory. Accept it when the resolved target stays inside ANY
+                # allowed root (e.g. ../images/x.gif escaping base_dir but still
+                # inside the import root a DirectoryParser passed down).
+                if base_dir:
+                    candidate = (base_dir / path).resolve()
+                    if candidate.exists():
+                        for root in allowed_roots:
+                            try:
+                                candidate.relative_to(root.resolve())
+                                return candidate
+                            except ValueError:
+                                continue
 
-            # Derived-media semantics: the reference may instead be relative to
-            # one of the media roots themselves (e.g. images extracted by the
-            # PDF/DOC parser into a media dir).
-            for root in allowed_roots:
-                candidate = (root / path).resolve()
+                # Derived-media semantics: the reference may instead be relative to
+                # one of the media roots themselves (e.g. images extracted by the
+                # PDF/DOC parser into a media dir).
+                for root in allowed_roots:
+                    candidate = (root / path).resolve()
 
-                # Verify the resolved candidate stays under the allowed root,
-                # rejecting traversal attempts such as ../../private.png.
-                try:
-                    candidate.relative_to(root.resolve())
-                except ValueError:
-                    logger.warning(
-                        f"[MarkdownParser] Rejected image path outside base dir: {path_str}"
-                    )
-                    continue
+                    # Verify the resolved candidate stays under the allowed root,
+                    # rejecting traversal attempts such as ../../private.png.
+                    try:
+                        candidate.relative_to(root.resolve())
+                    except ValueError:
+                        logger.warning(
+                            f"[MarkdownParser] Rejected image path outside base dir: {path_str}"
+                        )
+                        continue
 
-                if candidate.exists():
-                    return candidate
+                    if candidate.exists():
+                        return candidate
 
             return None
         except Exception:

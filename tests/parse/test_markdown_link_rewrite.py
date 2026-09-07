@@ -574,6 +574,26 @@ class TestImageLinkSplit:
         mapping = [_decode(c) for u, c in fake.files.items() if u.endswith(".image_mappings.json")]
         assert mapping and image_ref in mapping[0], fake.files
 
+    async def test_literal_angle_bracket_image_filename_falls_back(self, tmp_path: Path):
+        kb = tmp_path / "kb"
+        kb.mkdir()
+        image_path = kb / "photo.png"
+        _write_valid_png(image_path)
+        image_path.rename(kb / "<photo.png>")
+        src = kb / "page.md"
+        image_ref = "<photo.png>"
+        src.write_text(f"![p]({image_ref})", encoding="utf-8")
+
+        fake = FakeVikingFS()
+        with patch.object(BaseParser, "_get_viking_fs", return_value=fake):
+            await MarkdownParser().parse(
+                str(src), enable_link_rewrite=True, link_rewrite_root=str(kb)
+            )
+
+        assert any(u.endswith("/<photo.png>") for u in fake.files), fake.files
+        mapping = [_decode(c) for u, c in fake.files.items() if u.endswith(".image_mappings.json")]
+        assert mapping and image_ref in mapping[0], fake.files
+
     async def test_image_outside_base_dir_depth_adjusted(self, tmp_path: Path):
         # The md lives in kb/sub; the image lives in kb/img — outside base_dir
         # (= the md's own directory) but inside the import root. #2429 cannot
