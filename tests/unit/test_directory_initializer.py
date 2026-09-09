@@ -7,6 +7,7 @@ from openviking.core.namespace import (
     may_include_hidden_actor_peers,
 )
 from openviking.server.identity import RequestContext, Role
+from openviking.storage.upsert_options import RecordState
 from openviking_cli.session.user_id import UserIdentifier
 
 
@@ -65,6 +66,11 @@ async def test_initialize_account_workspace_batches_preset_directories():
     vectorized_uris = {uri for uri in expected_uris if not is_session_uri(uri)}
     assert len(vikingdb.get_calls[0][0]) == 2 * len(vectorized_uris)
     assert len(vikingdb.embedding_messages) == 2 * len(vectorized_uris)
+    assert all(
+        message.context_data["_upsert_options"]["record_state"]
+        == RecordState.NEW.value
+        for message in vikingdb.embedding_messages
+    )
 
     second_account_count, second_user_count = await initializer.initialize_account_workspace(ctx)
 
