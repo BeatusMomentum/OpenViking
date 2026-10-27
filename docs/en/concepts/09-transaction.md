@@ -440,8 +440,14 @@ Redis-backed configuration:
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `provider` | str | `filesystem`, `memory`, or `cache` | `filesystem` |
+| `provider` | str | `filesystem`, `memory`, `sqlite`, or `cache` | `filesystem` |
+| `sqlite_path` | str / null | Optional absolute local database path for `sqlite`; see [SQLite setup](../configuration/01-server.md#storage) | `{storage.workspace}/_system/pathlock/pathlock.db` for `sqlite` |
 | `lock_expire_secs` | float | Seconds before an unrefreshed lock becomes stale | `30.0` |
+
+For replicas sharing EFS across containers or hosts, use `provider="cache"` with
+shared Redis. SQLite is limited to one shared database file on the same machine's
+local disk; EFS/NFS/SMB and independent container-local databases are unsupported.
+See [deployment limits and provider selection](../configuration/01-server.md#storage).
 
 Legacy compatibility form:
 

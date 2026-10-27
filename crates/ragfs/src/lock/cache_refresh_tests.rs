@@ -187,7 +187,10 @@ async fn manager_uses_batch_for_manual_and_background_refresh() {
         ACQUIRE_BATCH_ID => {
             let owner = std::str::from_utf8(&request.args[0]).unwrap();
             let time = std::str::from_utf8(&request.args[1]).unwrap();
-            let mut results = vec![ScriptValue::Bytes(b"ok".to_vec())];
+            let mut results = vec![
+                ScriptValue::Bytes(b"ok".to_vec()),
+                ScriptValue::Bytes(b"0".to_vec()),
+            ];
             for pair in request.args[4..].chunks_exact(2) {
                 let kind = std::str::from_utf8(&pair[1]).unwrap();
                 results.extend([
